@@ -6,6 +6,15 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 tf.reset_default_graph()
 
+# Parameters:
+training_iters = 200
+learning_rate = 0.001
+batch_size = 128
+
+n_input = 28
+n_classes = 10
+
+
 # import data
 X_test = pd.read_csv('test.csv')
 train_df = pd.read_csv('train.csv')
@@ -55,15 +64,6 @@ X_train.max()
 # Random rotations
 datagen = keras.preprocessing.image.ImageDataGenerator(rotation_range=45)
 datagen.fit(X_train)
-
-
-# Parameters:
-training_iters = 200
-learning_rate = 0.001
-batch_size = 128
-
-n_input = 28
-n_classes = 10
 
 
 # placeholders for input and labels:
@@ -133,5 +133,30 @@ cost = tf.reduce_mean(
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
 # evaluate accuracy:
-correct_prediction = tf.equal(tf.argmax(pred,1), tf.argmax(y,1))
+correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+
+# Initialize variables
+init = tf.global_variables_initializer()
+
+with tf.Session() as sess:
+    sess.run(init)
+    train_loss = []
+    test_loss = []
+    train_accuracy = []
+    test_accuracy = []
+    summary_writer = tf.summary.FileWriter('./Output', sess.graph)
+    for i in range(training_iters):
+        for batch in range(len(X_train)/batch_size):
+            batch_x = X_train[batch*batch_size:min((batch+1)*batch_size,len(X_train))]
+            batch_y = Y_train[batch*batch_size:min((batch+1)*batch_size,len(Y_train))]
+
+            opt = sess.run(optimizer, feed_dict = {x: batch_x , y: batch_y})
+            loss, acc = sess.run([cost,accuracy], feed_dict = {x: batch_x , y: batch_y})
+
+        print('Iteration ' + str(i) + ", Loss= " + \
+        "{:.6f}".format(loss) + ", Training Accuracy= " + \
+        "{:.5f}".format(acc))
+
+        # calculate accuracy for all training and validation:
+        valid_loss,valid_acc = sess.run(cost,accuracy])
