@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow import keras
+from math import floor
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -7,7 +8,7 @@ import matplotlib.pyplot as plt
 tf.reset_default_graph()
 
 # Parameters:
-training_iters = 200
+epochs = 5
 learning_rate = 0.001
 batch_size = 128
 
@@ -136,18 +137,18 @@ optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
+# output predictions
+preds = tf.argmax(pred, 1)
+
 # Initialize variables
 init = tf.global_variables_initializer()
 
 with tf.Session() as sess:
     sess.run(init)
-    train_loss = []
-    test_loss = []
-    train_accuracy = []
-    test_accuracy = []
+    valid_accuracy = []
     summary_writer = tf.summary.FileWriter('./Output', sess.graph)
-    for i in range(training_iters):
-        for batch in range(len(X_train)/batch_size):
+    for i in range(epochs):
+        for batch in range(floor(len(X_train)/batch_size)):
             batch_x = X_train[batch*batch_size:min((batch+1)*batch_size,len(X_train))]
             batch_y = Y_train[batch*batch_size:min((batch+1)*batch_size,len(Y_train))]
 
@@ -159,4 +160,13 @@ with tf.Session() as sess:
         "{:.5f}".format(acc))
 
         # calculate accuracy for all training and validation:
-        valid_loss,valid_acc = sess.run(cost,accuracy])
+        valid_acc = sess.run(accuracy, feed_dict = {x : X_val, y: Y_val})
+        print('Validation Accuracy= '+ "{:.5f}".format(valid_acc))
+        valid_accuracy.append(valid_acc)
+    summary_writer.close()
+    predictions = sess.run(preds, feed_dict = {x : X_test})
+    output = pd.concat([pd.Series(range(X_test.shape[0])),
+                        pd.to_numeric(pd.Series(predictions),downcast='integer')], axis = 1)
+
+    output.columns = ['ImageId','Label']
+    output.to_csv('output.csv',index=False)

@@ -151,7 +151,9 @@ pd.Series(index)
 
 pd.to_numeric(pd.Series(Y_test),downcast='integer')
 
-output = pd.concat([pd.Series(range(X_test.shape[0]),pd.to_numeric(pd.Series(Y_test),downcast='integer')], axis = 1)
+output = pd.concat([pd.Series(range(X_test.shape[0])),
+                    pd.to_numeric(pd.Series(Y_test),downcast='integer')
+                    ], axis=1)
 
 output.head()
 
