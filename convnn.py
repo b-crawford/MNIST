@@ -1,3 +1,4 @@
+# Libraries
 import tensorflow as tf
 from tensorflow import keras
 from math import floor
@@ -5,6 +6,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
+
 tf.reset_default_graph()
 
 # Parameters:
@@ -17,17 +19,13 @@ n_classes = 10
 
 
 # import data
-X_test = pd.read_csv('test.csv')
-train_df = pd.read_csv('train.csv')
+X_test = pd.read_csv('../input/test.csv')
+train_df = pd.read_csv('../input/train.csv')
 
-X_test.shape
-train_df.shape
+train_df.head()
 
 # split the training data into training and vaidation
 train_df, val_df = train_test_split(train_df)
-
-train_df.shape
-val_df.shape
 
 # seperate out the X and Y data frames
 X_train = train_df.drop(['label'], axis=1)
@@ -38,14 +36,13 @@ Y_val = val_df['label']
 
 # one hot encode
 number_of_classes = 10
-Y_train = keras.utils.to_categorical(Y_train, number_of_classes)
-Y_val = keras.utils.to_categorical(Y_val, number_of_classes)
+Y_train = keras.utils.to_categorical(Y_train, n_classes)
+Y_val = keras.utils.to_categorical(Y_val, n_classes)
 
 # Reshape to [samples][pixel_rows][pixel_cols][channels]
-X_train = np.array(X_train).reshape(len(X_train), 28, 28, 1)
-X_val = np.array(X_val).reshape(len(X_val), 28, 28, 1)
-X_test = np.array(X_test).reshape(len(X_test), 28, 28, 1)
-
+X_train = np.array(X_train).reshape(len(X_train), n_input, n_input, 1)
+X_val = np.array(X_val).reshape(len(X_val), n_input, n_input, 1)
+X_test = np.array(X_test).reshape(len(X_test), n_input, n_input, 1)
 
 # look at shapes
 X_train.shape
@@ -54,17 +51,11 @@ Y_train.shape
 X_val.shape
 Y_val.shape
 
-
 # Scale the pixel data
 X_train.max()
 X_train, X_val, X_test = X_train / 255, X_val / 255, X_test / 255
 
 X_train.max()
-
-
-# Random rotations
-datagen = keras.preprocessing.image.ImageDataGenerator(rotation_range=45)
-datagen.fit(X_train)
 
 
 # placeholders for input and labels:
@@ -125,6 +116,7 @@ def conv_net(x, weights, biases):
     return out
 
 
+
 # Now compute loss
 pred = conv_net(x, weights, biases)
 
@@ -138,7 +130,7 @@ correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 # output predictions
-preds = tf.argmax(pred, 1)
+preds = tf.argmax(pred,1)
 
 # Initialize variables
 init = tf.global_variables_initializer()
@@ -155,7 +147,7 @@ with tf.Session() as sess:
             opt = sess.run(optimizer, feed_dict = {x: batch_x , y: batch_y})
             loss, acc = sess.run([cost,accuracy], feed_dict = {x: batch_x , y: batch_y})
 
-        print('Iteration ' + str(i) + ", Loss= " + \
+        print('Epoch ' + str(i) + ", Loss= " + \
         "{:.6f}".format(loss) + ", Training Accuracy= " + \
         "{:.5f}".format(acc))
 
@@ -165,8 +157,8 @@ with tf.Session() as sess:
         valid_accuracy.append(valid_acc)
     summary_writer.close()
     predictions = sess.run(preds, feed_dict = {x : X_test})
-    output = pd.concat([pd.Series(range(X_test.shape[0])),
+    output = pd.concat([pd.Series(range(1,X_test.shape[0]+1)),
                         pd.to_numeric(pd.Series(predictions),downcast='integer')], axis = 1)
-
     output.columns = ['ImageId','Label']
     output.to_csv('output.csv',index=False)
+    
