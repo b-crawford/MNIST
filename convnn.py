@@ -6,11 +6,12 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 tf.reset_default_graph()
 
 # Parameters:
-epochs = 5
+epochs = 20
 learning_rate = 0.001
 batch_size = 128
 
@@ -39,27 +40,35 @@ number_of_classes = 10
 Y_train = keras.utils.to_categorical(Y_train, n_classes)
 Y_val = keras.utils.to_categorical(Y_val, n_classes)
 
-# Reshape to [samples][pixel_rows][pixel_cols][channels]
+# Reshape to [samples][channels][pixel_rows][pixel_cols]
 X_train = np.array(X_train).reshape(len(X_train), n_input, n_input, 1)
 X_val = np.array(X_val).reshape(len(X_val), n_input, n_input, 1)
 X_test = np.array(X_test).reshape(len(X_test), n_input, n_input, 1)
 
-# look at shapes
-X_train.shape
-Y_train.shape
-
-X_val.shape
-Y_val.shape
 
 # Scale the pixel data
-X_train.max()
 X_train, X_val, X_test = X_train / 255, X_val / 255, X_test / 255
 
-X_train.max()
+
+# Agment Dataset with random rotations
+aug_factor = 5
+
+X_train_aug = []
+Y_train_aug = []
+
+for i in range (0, len(X_train)):
+    # add original image in
+    X_train_aug.append(X_train[i])
+    Y_train_aug.append(Y_train[i])
+    for j in range(0,aug_factor-1):
+        X_train_aug.append(tf.contrib.keras.preprocessing.image.random_rotation(X_train[i], 20))
+        Y_train_aug.append(Y_train[i])
+X_train_aug = np.asarray(X_train_aug)
+Y_train_aug = np.asarray(Y_train_aug)
 
 
 # placeholders for input and labels:
-x = tf.placeholder(tf.float32, shape=[None, 28, 28, 1])
+x = tf.placeholder(tf.float32, shape=[None, n_input, n_input, 1])
 y = tf.placeholder(tf.float32, shape=[None, n_classes])
 
 
@@ -85,7 +94,8 @@ weights = {
     'wc2': tf.get_variable('W1', shape=(3, 3, 32, 64)),
     'wc3': tf.get_variable('W2', shape=(3, 3, 64, 128)),
     'wd1': tf.get_variable('W3', shape=(4 * 4 * 128, 128)),
-    'out': tf.get_variable('W6', shape=(128, n_classes))
+    'wd2': tf.get_variable('W4', shape=(128, 56)),
+    'out': tf.get_variable('W5', shape=(56, n_classes))
 }
 
 biases = {
@@ -93,7 +103,8 @@ biases = {
     'bc2': tf.get_variable('B1', shape=(64)),
     'bc3': tf.get_variable('B2', shape=(128)),
     'bd1': tf.get_variable('B3', shape=(128)),
-    'out': tf.get_variable('B4', shape=(n_classes))
+    'bd2': tf.get_variable('B4', shape=(56)),
+    'out': tf.get_variable('B5', shape=(n_classes))
 }
 
 
@@ -111,8 +122,13 @@ def conv_net(x, weights, biases):
     fc1 = tf.reshape(conv3, [-1, weights['wd1'].shape.as_list()[0]])
     fc1 = tf.add(tf.matmul(fc1, weights['wd1']), biases['bd1'])
     fc1 = tf.nn.relu(fc1)
+    
+    d1 = tf.layers.dropout(fc1,0.2)
+    
+    fc2 = tf.add(tf.matmul(d1, weights['wd2']), biases['bd2'])
+    fc2 = tf.nn.relu(fc2)
 
-    out = tf.add(tf.matmul(fc1, weights['out']), biases['out'])
+    out = tf.add(tf.matmul(fc2, weights['out']), biases['out'])
     return out
 
 
