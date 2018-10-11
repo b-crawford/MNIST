@@ -6,14 +6,12 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 
 tf.reset_default_graph()
 
 # Parameters:
-epochs = 20
-learning_rate = 0.001
-batch_size = 128
+epochs = 100
+batch_size = 500
 
 n_input = 28
 n_classes = 10
@@ -40,7 +38,7 @@ number_of_classes = 10
 Y_train = keras.utils.to_categorical(Y_train, n_classes)
 Y_val = keras.utils.to_categorical(Y_val, n_classes)
 
-# Reshape to [samples][channels][pixel_rows][pixel_cols]
+# Reshape to [samples][pixel_rows][pixel_cols]
 X_train = np.array(X_train).reshape(len(X_train), n_input, n_input, 1)
 X_val = np.array(X_val).reshape(len(X_val), n_input, n_input, 1)
 X_test = np.array(X_test).reshape(len(X_test), n_input, n_input, 1)
@@ -132,12 +130,19 @@ def conv_net(x, weights, biases):
     return out
 
 
+# learning rate decay
+global_step = tf.Variable(0, trainable=False)
+starter_learning_rate = 0.001
+learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
+                                           100000, 0.96, staircase=True)
 
 # Now compute loss
 pred = conv_net(x, weights, biases)
 
 cost = tf.reduce_mean(
     tf.nn.softmax_cross_entropy_with_logits_v2(logits=pred, labels=y))
+
+
 
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
